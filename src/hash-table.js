@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable class-methods-use-this */
-const { LimitedArray, getIndexBelowMax } = require('./hash-table-helpers');
+const { LimitedArray, getIndexBelowMax, LinkedList } = require('./hash-table-helpers');
 
 class HashTable {
   constructor(limit = 8) {
@@ -36,10 +36,18 @@ class HashTable {
   insert(key, value) {
     if (this.capacityIsFull()) this.resize();
     const index = getIndexBelowMax(key.toString(), this.limit);
-    let bucket = this.storage.get(index) || [];
-
-    bucket = bucket.filter(item => item[0] !== key);
-    bucket.push([key, value]);
+    let bucket = this.storage.get(index);
+    if (bucket === undefined) {
+      bucket = new LinkedList();
+    }
+    let current = bucket.head;
+    while (current) {
+      if (current.value[0] === key) {
+        current.value[1] = value;
+      }
+      current = current.next;
+    }
+    bucket.addToTail([key, value]);
     this.storage.set(index, bucket);
   }
   // Removes the key, value pair from the hash table
@@ -47,11 +55,19 @@ class HashTable {
   // Remove the key, value pair from the bucket
   remove(key) {
     const index = getIndexBelowMax(key.toString(), this.limit);
-    let bucket = this.storage.get(index);
-
-    if (bucket) {
-      bucket = bucket.filter(item => item[0] !== key);
-      this.storage.set(index, bucket);
+    const bucket = this.storage.get(index);
+    if (bucket !== undefined) {
+      let current = bucket.head;
+      if (current.value[0] === key) {
+        bucket.removeHead();
+      } else {
+        while (current.next) {
+          if (current.next.value[0] === key) {
+            current = current.next.next;
+          }
+          current = current.next;
+        }
+      }
     }
   }
   // Fetches the value associated with the given key from the hash table
@@ -60,12 +76,15 @@ class HashTable {
   retrieve(key) {
     const index = getIndexBelowMax(key.toString(), this.limit);
     const bucket = this.storage.get(index);
-    let retrieved;
-    if (bucket) {
-      retrieved = bucket.filter(item => item[0] === key)[0];
+    if (bucket !== undefined) {
+      let current = bucket.head;
+      while (current) {
+        if (current.value[0] === key) {
+          return current.value[1];
+        }
+        current = current.next;
+      }
     }
-
-    return retrieved ? retrieved[1] : undefined;
   }
 }
 
